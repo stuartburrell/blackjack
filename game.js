@@ -7,6 +7,10 @@ var dealerTwo
 var username
 var playerAces = 0
 var dealerAces = 0
+var numGames = 0
+var numWins = 0
+
+var timer = milli => new Promise(x => setTimeout(x, milli))
 
 function resetGlobal() {
   playerTotal = 0
@@ -80,12 +84,18 @@ function addCard(card, user) {
   src.appendChild(img);
 }
 
-function newGame() {
+async function newGame() {
+  updateTable()
   resetGlobal()
-  // Reset setup and result areas
-  document.getElementById("setup").innerHTML = ''
-  document.getElementById("result").innerHTML = ''
+  numGames++
 
+  document.getElementById("controls").innerHTML = ''
+
+  // Reset setup and result areas
+  var elem = document.getElementById("setup");
+  if (elem) {
+    elem.remove();
+  }
   // Initialise deck and shuffle
   deck = new Deck()
   deck.shuffle()
@@ -93,6 +103,8 @@ function newGame() {
   // Draw starting cards and update running total
   let cardOne = deck.drawCard("player")
   let cardTwo = deck.drawCard("player")
+  //let cardOne = 'AD'
+  //let cardTwo = 'JH'
   dealerOne = deck.drawCard("dealer")
   dealerTwo = deck.drawCard("dealer")
 
@@ -109,43 +121,63 @@ function newGame() {
     dealerAces = 1
   }
 
+  // Add dealer card images
+  document.getElementById("dealer").innerHTML = `
+    <p id="dealerCards"><strong>Dealer</strong><br><br></p>
+    <p id="dealerTotal"><strong>Dealer's</strong> Total : ${cardToNumber(dealerOne)}</p>`;
+  addCard(dealerOne, "dealer")
+  addCard("red_back", "dealer")
+
   // Initialise UI for playing mode and add player cards
   document.getElementById("player").innerHTML = `
-    <p id="playerCards"> <strong>${username}'s</strong> cards: <br><br></p>
-    <p id="total"> <strong>${username}'s</strong> total = ${playerTotal}</p>
-    <div id="controls">
-      <button type="button" onclick="hit()">Hit!</button>
-      <button type="button" onclick="stick()">Stick!</button>
-    </div>`;
+    <p id="playerCards"> <strong>${username}</strong><br><br></p>
+    <p id="total"> <strong>${username}'s</strong> Total : ${0}</p>`
+
+  addCard("red_back", "player")
+  addCard("red_back", "player")
+
+  await timer(800)
+
+  document.getElementById("player").innerHTML = `
+    <p id="playerCards"> <strong>${username}</strong><br><br></p>
+    <p id="total"> <strong>${username}'s</strong> Total : ${cardToNumber(cardOne)}</p>`
+  addCard(cardOne, "player")
+  addCard("red_back", "player")
+
+  await timer(800)
+  document.getElementById("player").innerHTML = `
+    <p id="playerCards"> <strong>${username}</strong><br><br></p>
+    <p id="total"> <strong>${username}'s</strong> Total : ${playerTotal}</p>`
   addCard(cardOne, "player")
   addCard(cardTwo, "player")
 
-  // Add dealer card images
-  document.getElementById("dealer").innerHTML = `
-    <p id="dealerCards"><strong>Dealer's</strong> cards: <br><br></p>`;
-  addCard(dealerOne, "dealer")
-  addCard("red_back", "dealer")
+  // Add controls
+  document.getElementById("controls").innerHTML = `
+      <button type="button" class="button" onclick="hit()">Hit!</button>
+      <button type="button" class="button" onclick="stick()">Stick!</button>`;
+
 
   // Check for immediate blackjack
   if (playerTotal === 21) {
     document.getElementById("controls").innerHTML = ''
     document.getElementById("total").innerHTML = `
     <p id="total"> <strong>${username}</strong> got a Blackjack!</p>`
-    document.getElementById("dealerCards").innerHTML = ''
+    await timer(800)
+    document.getElementById("dealer").innerHTML = `
+      <p id="dealerCards"><strong>Dealer</strong><br><br></p>`;
     addCard(dealerOne, "dealer")
     addCard(dealerTwo, "dealer")
     if (dealerTotal === 21) {
-      document.getElementById("result").innerHTML = `It's a push! Nobody wins! <br><br>
-        <button type="button" onclick="newGame()">Play again</button>`
+      setResult("It's a push! Nobody wins!")
     } else {
-      document.getElementById("result").innerHTML = `The dealer didn't get blackjack! You win! <br><br>
-        <button type="button" onclick="newGame()">Play again</button>`
+      numWins++
+      setResult("The dealer doesn't! You win!")
     }
     return
   }
 }
 
-function hit() {
+async function hit() {
   // Draw card from deck, add image
   let card = deck.drawCard("player")
   addCard(card, "player")
@@ -153,10 +185,7 @@ function hit() {
 
   // Check loss condition
   if(playerTotal > 21 && playerAces === 0) {
-    document.getElementById("dealer").innerHTML = ''
-    document.getElementById("controls").innerHTML = ''
-    document.getElementById("result").innerHTML = `You went bust! The dealer wins! <br><br>
-      <button type="button" onclick="newGame()">Play again</button>`
+    setResult("You went bust! The dealer wins!")
   } else if (playerTotal > 21 && playerAces > 0) {
     playerTotal -= 10 // turn one ace into a 1 value card
     playerAces -= 1 // update number of aces counting as 11
@@ -164,7 +193,29 @@ function hit() {
 
   // Update running total
   document.getElementById("total").innerHTML = `<strong>${username}'s</strong>
-    total = ${playerTotal}`
+    Total : ${playerTotal}`
+}
+
+function setResult(str) {
+  updateTable()
+  document.getElementById("controls").innerHTML = `<strong>${str}</strong> <br><br>
+    <button type="button" class="button" onclick="newGame()">Play again</button>
+    <button type="button" class="button" onClick="window.location.reload();">Exit</button>`
+}
+
+function evaluateResult() {
+  if(dealerTotal <= 21 && dealerTotal > playerTotal) {
+    setResult("The dealer wins!")
+  } else if (dealerTotal <= 21 && dealerTotal === playerTotal) {
+    setResult("It's a push. Nobody wins!")
+  } else if (dealerTotal <= 21 && dealerTotal < playerTotal) {
+    numWins++
+    setResult("You win!")
+  } else {
+    numWins++
+    setResult("The dealer goes bust! You win!")
+  }
+  updateTable()
 }
 
 async function stick() {
@@ -173,15 +224,14 @@ async function stick() {
 
   // Initialise dealer's running total and update card images
   document.getElementById("dealer").innerHTML = `
-    <p id="dealerCards"><strong>Dealer's</strong> cards: <br><br></p>
-    <p id="dealerTotal"><strong>Dealer's</strong> total = ${dealerTotal}</p>
+    <p id="dealerCards"><strong>Dealer</strong><br><br></p>
+    <p id="dealerTotal"><strong>Dealer's</strong> Total : ${dealerTotal}</p>
   `;
   addCard(dealerOne, "dealer")
   addCard(dealerTwo, "dealer")
 
   // Reveal cards until dealer reaches a 17 (with hitting on soft 17)
-  const timer = milli => new Promise(x => setTimeout(x, milli))
-  while (dealerTotal < 17 && dealerTotal < playerTotal) {
+  while (dealerTotal < 17 && dealerTotal <= playerTotal) {
     await timer(800)
     let newCard = deck.drawCard("dealer");
     addCard(newCard, "dealer");
@@ -189,23 +239,37 @@ async function stick() {
     if (dealerTotal === 17 && dealerAces > 0) {
       dealerTotal -= 10;
       dealerAces -= 1;
+    } else if (dealerTotal > 21 && dealerAces > 0) {
+      dealerTotal -= 10;
+      dealerAces -= 1;
     }
     document.getElementById("dealerTotal").innerHTML = `
-      <strong>Dealer's</strong> total = ${dealerTotal}`
+      <strong>Dealer's</strong> Total : ${dealerTotal}`
   }
 
   // Display result and option to play again
-  if(dealerTotal <= 21 && dealerTotal > playerTotal) {
-    document.getElementById("result").innerHTML = `The dealer wins! <br><br>
-      <button type="button" onclick="newGame()">Play again</button>`
-  } else if (dealerTotal <= 21 && dealerTotal === playerTotal) {
-    document.getElementById("result").innerHTML = `It's a push. Nobody wins! <br><br>
-      <button type="button" onclick="newGame()">Play again</button>`
-  } else if (dealerTotal <= 21 && dealerTotal < playerTotal) {
-    document.getElementById("result").innerHTML = `You win! <br><br>
-      <button type="button" onclick="newGame()">Play again</button>`
+  evaluateResult()
+}
+
+function updateTable() {
+  let winPercentage = Math.round((numWins/numGames) * 100);
+  if (isNaN(winPercentage)) {
+    winPercentage = ''
   } else {
-    document.getElementById("result").innerHTML = `The dealer goes bust! You win! <br><br>
-      <button type="button" onclick="newGame()">Play again</button>`
+    winPercentage += '%'
   }
+  document.getElementById("tablesec").innerHTML = `
+    <h3>Session Results</h3>
+    <table class="center">
+    <tr>
+      <th>Games Played</th>
+      <th>Games Won</th>
+      <th>Win Percentage</th>
+    </tr>
+    <tr>
+      <th>${numGames}</th>
+      <th>${numWins}</th>
+      <th>${winPercentage}</th>
+    </tr>
+</table>`
 }

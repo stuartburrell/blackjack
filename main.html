@@ -2,21 +2,24 @@
 <html>
 
 <head>
-  <h1>Budget Blackjack</h1>
+  <link href="./style.css" type="text/css" rel="stylesheet">
+  <h1>The Blackjack Challenge</h1>
   <script src="game.js"></script>
-  <section id="setup">
-    <form id="form" onsubmit="return false;">
-      <input type="text" id="userInput" placeholder="Enter your name!"/>
-    </form>
-    <br>
-    <button type="button" onclick="setName();newGame()">Let's play!</button>
-  </section>
 </head>
 
 <body>
-  <section id="player"></section>
-  <section id="dealer"></section>
-  <section id="result"></section>
+  <div>
+    <section id="dealer"></section>
+    <section id="player">
+      Who wishes to challenge the dealer? <br><br>
+      <form id="form" onsubmit="return false;">
+        <input type="text" id="userInput" placeholder="Enter your name!"/>
+      </form>
+      <br>
+      <button type="button" class="button" onclick="setName();newGame()">Let's play!</button>
+    </section>
+    <section id="controls"></section>
+  </div>
 </body>
-
+<section id="tablesec"></section>
 </html>
